@@ -3,39 +3,49 @@ from flask import Flask, request, jsonify
 app = Flask(__name__)
 
 
-def convert_measurements(input_string):
-    measurements = input_string.split(',')
-    result = []
-    for measurement in measurements:
+def convert_measurement_string(measurement_string):
+    packages = measurement_string.split(',')  # Split measurement string into packages
+    converted_packages = []
+
+    for package in packages:
+        package_values = []
         count = ""
-        values = []
-        for char in measurement:
+
+        for char in package:
+            if char == 'z':
+                break  # Terminate decoding if non-'z' character is encountered
+
             if char.isdigit():
                 count += char
             else:
-                if count != "":
-                    values.append(int(count))
+                if count:
+                    package_values.append(int(count))
                     count = ""
-                if char.isalpha():
-                    value = ord(char.lower()) - ord('a') + 1
-                    values.append(value)
-        if count != "":
-            values.append(int(count))
-        result.append(sum(values))
-    return result
+
+                value = ord(char) - ord('a') + 1  # Convert char to numeric value
+                package_values.append(value)
+
+        if count:
+            package_values.append(int(count))
+
+        total_value = sum(package_values)
+        converted_packages.append(total_value)
+
+    return converted_packages
 
 
-@app.route('/')
-def convert_measurements_api():
-    input_string = request.args.get('convert-measurements')
-    if input_string:
-        try:
-            result = convert_measurements(input_string)
-            return jsonify({'result': result})
-        except Exception as e:
-            return jsonify({'error': str(e)})
-    else:
-        return jsonify({'error': 'Missing query parameter "convert-measurements"'})
+@app.route('/conversion', methods=['GET'])
+def convert_measurements():
+    measurement_string = request.args.get('convert-measurements', '')
+
+    if not measurement_string:
+        return jsonify({'error': 'Measurement string not provided.'}), 400
+
+    try:
+        converted_packages = convert_measurement_string(measurement_string)
+        return jsonify({'converted_packages': converted_packages})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 
 if __name__ == '__main__':
